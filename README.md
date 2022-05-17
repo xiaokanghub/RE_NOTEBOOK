@@ -1,4 +1,4 @@
-# RE_NOTE-BOOK
+# RE_NOTEBOOK
 Reverse engineering notes and books
 
 # move certificate to system dir
