@@ -577,3 +577,34 @@ print("\n--------------------------->finished<--------------------------")
 end = time.time()
 running_time = end - start
 ```
+# ASN1 RSA PublicKey decode
+```java
+import java.io.IOException;
+import java.math.BigInteger;
+import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1InputStream;
+import org.bouncycastle.asn1.ASN1Integer;
+import org.bouncycastle.asn1.DERSequence;
+import org.bouncycastle.asn1.DLSequence;
+
+import javax.xml.bind.DatatypeConverter;
+
+
+public class ASN1Decode {
+    public static BigInteger [] parseASN1RsaPublicKey(byte [] encoded) throws IOException {
+        ASN1InputStream asn1_is = new ASN1InputStream(encoded);
+        DLSequence dlSeq = (DLSequence) asn1_is.readObject();
+        ASN1Integer asn1_n = (ASN1Integer) dlSeq.getObjectAt(0);
+        ASN1Integer asn1_e = (ASN1Integer) dlSeq.getObjectAt(1);
+        asn1_is.close();
+        return new BigInteger[]{ asn1_n.getPositiveValue(), asn1_e.getPositiveValue()};
+    }
+
+    public static void main(String[] args) throws IOException {
+        String key = "3048024100BD6541713AB629552E8CDB8CA32D05B2545BD5A64EA0E05A8672C0F5703AA09DD66F54145076423A8C86E1BAE5820117E22B91A1B71CA8083D9D4CFC48E94BFD0203010001";
+        byte[] keyBytes = DatatypeConverter.parseHexBinary(key);
+        parseASN1RsaPublicKey(keyBytes);
+
+    }
+}
+```
