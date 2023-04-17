@@ -608,3 +608,69 @@ public class ASN1Decode {
     }
 }
 ```
+
+anti dy verify
+```javascript
+function todoOndlopen(libraryName, fn) {
+    return new Promise((resolve, reject) => {
+        var exportName = Java.androidVersion >= 8.1 ? 'android_dlopen_ext' : 'dlopen';
+        var dlopen_ptr = Module.findExportByName(null, exportName);
+        if (dlopen_ptr) {
+            Interceptor.attach(dlopen_ptr, {
+                onEnter: function (args) {
+                    var libPath = args[0].readCString();
+                    if (libPath.indexOf(libraryName) !== -1) {
+                        console.log(`libraryPath: ${libPath}`);
+                        this.hook = true
+                    }
+                },
+                onLeave: function (retVal) {
+                    if (this.hook) {
+                        console.log('hooking')
+                        resolve(fn());
+                    }
+                }
+            })
+        } else {
+            reject(exportName + ' not found')
+        }
+    })
+}
+
+// enum ssl_verify_result_t BORINGSSL_ENUM_INT {
+//     ssl_verify_ok,  0
+//     ssl_verify_invalid, 1
+//     ssl_verify_retry, 2
+// };
+function replaceCallback(pcustom_verify_callback){
+    Interceptor.attach(pcustom_verify_callback, {
+        onLeave(retval){
+            if (retval !== 0){
+                console.log("custom_verify_callback retval: ", retval)
+                console.log('custom_verify_callback retval replace with 0x0');
+                retval.replace(ptr('0x0'))
+            }
+        }
+    })
+}
+
+//void SSL_CTX_set_custom_verify(
+//     SSL_CTX *ctx, int mode,
+//     enum ssl_verify_result_t (*callback)(SSL *ssl, uint8_t *out_alert)) {
+//   ctx->verify_mode = mode;
+//   ctx->custom_verify_callback = callback;
+// }
+function anti_ssl_verify(){
+    const libraryName = 'libsscronet.so';
+    return todoOndlopen(libraryName, ()=>{
+        const pSSL_CTX_set_custom_verify = Module.findExportByName('libttboringssl.so', 'SSL_CTX_set_custom_verify');
+        var SSL_CTX_set_custom_verify = new NativeFunction(pSSL_CTX_set_custom_verify, 'pointer', ['pointer', 'int', 'pointer']);
+        Interceptor.replace(pSSL_CTX_set_custom_verify, new NativeCallback((ctx, verify_mode, pcustom_verify_callback)=>{
+            console.log(`SSL_CTX_set_custom_verify be called, ctx: ${ctx}, verify_mode: ${verify_mode}, pcustom_verify_callback=${pcustom_verify_callback}`);
+            replaceCallback(pcustom_verify_callback)
+            return SSL_CTX_set_custom_verify(ctx, verify_mode, pcustom_verify_callback);
+        }, 'pointer',['pointer', 'int', 'pointer']))
+
+    })
+}
+```
