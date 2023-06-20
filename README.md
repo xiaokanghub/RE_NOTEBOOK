@@ -674,3 +674,21 @@ function anti_ssl_verify(){
     })
 }
 ```
+# anti ijmi frida
+```javascript
+function hook_pthread_create() {
+    let pthread_create = Module.findExportByName(null, "pthread_create")
+    let org_pthread_create = new NativeFunction(pthread_create, "int", ["pointer", "pointer", "pointer", "pointer"])
+    let my_pthread_create = new NativeCallback(function (a, b, c, d) {
+        let m = Process.getModuleByName("libexec.so");
+        let base = m.base
+        console.log(Process.getModuleByAddress(c).name)
+        if (Process.getModuleByAddress(c).name === m.name) {
+            console.log("pthread_create")
+            return 0;
+        }
+        return org_pthread_create(a, b, c, d)
+    }, "int", ["pointer", "pointer", "pointer", "pointer"])
+    Interceptor.replace(pthread_create, my_pthread_create)
+}
+```
